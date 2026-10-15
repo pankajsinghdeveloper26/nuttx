@@ -47,10 +47,6 @@ if(CONFIG_DEV_GPIO)
   list(APPEND SRCS stm32_gpio.c)
 endif()
 
-if(CONFIG_CAN)
-  list(APPEND SRCS stm32_can.c)
-endif()
-
 if(CONFIG_MMCSD_SPI)
   list(APPEND SRCS stm32_spimmcsd.c)
 endif()
@@ -61,10 +57,6 @@ endif()
 
 if(CONFIG_SENSORS_QENCODER)
   list(APPEND SRCS stm32_qencoder.c)
-endif()
-
-if(CONFIG_SENSORS_HTS221)
-  list(APPEND SRCS stm32_hts221.c)
 endif()
 
 if(CONFIG_SENSORS_LSM6DSL)
@@ -81,10 +73,6 @@ endif()
 
 if(CONFIG_SENSORS_BMP180)
   list(APPEND SRCS stm32_bmp180.c)
-endif()
-
-if(CONFIG_SENSORS_BMP280)
-  list(APPEND SRCS stm32_bmp280.c)
 endif()
 
 if(CONFIG_SENSORS_MPU9250)

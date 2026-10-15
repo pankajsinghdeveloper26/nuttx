@@ -51,8 +51,6 @@
 #  include "stm32l4_rtc.h"
 #endif
 
-#include "stm32l4_i2c.h"
-
 #ifdef CONFIG_SENSORS_BMP280
 #include "stm32_bmp280.h"
 #endif
@@ -64,6 +62,8 @@
 #ifdef CONFIG_SENSORS_MPU9250
 #include "stm32_mpu9250.h"
 #endif
+
+#include "board_common.h"
 
 /****************************************************************************
  * Private Data
@@ -79,59 +79,6 @@
 #  define MMCSD_MINOR       CONFIG_NSH_MMCSDMINOR
 #else
 #  define MMCSD_MINOR       0
-#endif
-
-/****************************************************************************
- * Name: stm32_i2c_register
- *
- * Description:
- *   Register one I2C drivers for the I2C tool.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_SYSTEM_I2CTOOL)
-static void stm32_i2c_register(int bus)
-{
-  struct i2c_master_s *i2c;
-  int ret;
-
-  i2c = stm32_i2cbus_initialize(bus);
-  if (i2c == NULL)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to get I2C%d interface\n", bus);
-    }
-  else
-    {
-      ret = i2c_register(i2c, bus);
-      if (ret < 0)
-        {
-          syslog(LOG_ERR, "ERROR: Failed to register I2C%d driver: %d\n",
-                bus, ret);
-          stm32_i2cbus_uninitialize(i2c);
-        }
-    }
-}
-#endif
-
-/****************************************************************************
- * Name: stm32_i2ctool
- *
- * Description:
- *   Register I2C drivers for the I2C tool.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_SYSTEM_I2CTOOL)
-static void stm32_i2ctool(void)
-{
-  stm32_i2c_register(1);
-#if 0
-  stm32_i2c_register(1);
-  stm32_i2c_register(2);
-#endif
-}
-#else
-#  define stm32_i2ctool()
 #endif
 
 /****************************************************************************
@@ -151,29 +98,20 @@ int stm32_bringup(void)
   struct rtc_lowerhalf_s *rtclower;
 #endif
 
-#if defined(CONFIG_I2C) && defined(CONFIG_SYSTEM_I2CTOOL)
-  stm32_i2ctool();
-#endif
-
 #ifdef CONFIG_SENSORS_QENCODER
   int index;
   char buf[9];
 #endif
   int ret = OK;
 
-#ifdef HAVE_PROC
-  /* Mount the proc filesystem */
+  /* Initialize the board features common to all STM32 boards */
 
-  syslog(LOG_INFO, "Mounting procfs to /proc\n");
-
-  ret = nx_mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
+  ret = stm32_common_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d\n", ret);
-      return ret;
+      syslog(LOG_ERR, "ERROR: stm32_common_initialize() failed: %d\n",
+             ret);
     }
-#endif
 
 #ifdef HAVE_RTC_DRIVER
   /* Instantiate the STM32L4 lower-half RTC driver */
@@ -275,15 +213,6 @@ int stm32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: stm32_adc_setup failed: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_CAN
-  ret = stm32_can_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_can_setup failed: %d\n", ret);
-      return ret;
     }
 #endif
 
@@ -393,14 +322,6 @@ int stm32_bringup(void)
     }
 #endif
 #endif /* CONFIG_SENSORS_QENCODER */
-
-#ifdef CONFIG_SENSORS_HTS221
-  ret = stm32_hts221_initialize("/dev/hts221");
-  if (ret < 0)
-    {
-      serr("ERROR: Failed to initialize HTC221 driver: %d\n", ret);
-    }
-#endif
 
 #ifdef CONFIG_SENSORS_LSM6DSL
   ret = stm32_lsm6dsl_initialize("/dev/lsm6dsl0");

@@ -63,10 +63,6 @@
 #  include "stm32_capture.h"
 #endif
 
-#ifdef CONFIG_STM32_IWDG
-#  include "stm32_wdg.h"
-#endif
-
 #ifdef CONFIG_RNDIS
 #  include <nuttx/usb/rndis.h>
 #endif
@@ -76,6 +72,7 @@
 #endif
 
 #include "stm32_gpio.h"
+#include "board_common.h"
 
 /****************************************************************************
  * Private Functions
@@ -179,64 +176,6 @@ static int stm32_capture_setup(void)
 #endif
 
 /****************************************************************************
- * Name: stm32_i2c_register
- *
- * Description:
- *   Register one I2C drivers for the I2C tool.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_SYSTEM_I2CTOOL)
-static void stm32_i2c_register(int bus)
-{
-  struct i2c_master_s *i2c;
-  int ret;
-
-  i2c = stm32_i2cbus_initialize(bus);
-  if (i2c == NULL)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to get I2C%d interface\n", bus);
-    }
-  else
-    {
-      ret = i2c_register(i2c, bus);
-      if (ret < 0)
-        {
-          syslog(LOG_ERR, "ERROR: Failed to register I2C%d driver: %d\n",
-                 bus, ret);
-          stm32_i2cbus_uninitialize(i2c);
-        }
-    }
-}
-#endif
-
-/****************************************************************************
- * Name: stm32_i2ctool
- *
- * Description:
- *   Register I2C drivers for the I2C tool.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_SYSTEM_I2CTOOL)
-static void stm32_i2ctool(void)
-{
-#ifdef CONFIG_STM32_I2C1
-  stm32_i2c_register(1);
-#endif
-#ifdef CONFIG_STM32_I2C2
-  stm32_i2c_register(2);
-#endif
-#ifdef CONFIG_STM32_I2C3
-  stm32_i2c_register(3);
-#endif
-#ifdef CONFIG_STM32_I2C4
-  stm32_i2c_register(4);
-#endif
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -258,33 +197,16 @@ int stm32_bringup(void)
   struct rtc_lowerhalf_s *lower;
 #endif
 
+  /* Initialize the board features common to all STM32 boards */
+
+  ret = stm32_common_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_common_initialize() failed: %d\n",
+             ret);
+    }
+
   UNUSED(ret);
-
-#if defined(CONFIG_I2C) && defined(CONFIG_SYSTEM_I2CTOOL)
-  stm32_i2ctool();
-#endif
-
-#ifdef CONFIG_FS_PROCFS
-  /* Mount the procfs file system */
-
-  ret = nx_mount(NULL, STM32_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d\n",  ret);
-    }
-#endif /* CONFIG_FS_PROCFS */
-
-#ifdef CONFIG_FS_TMPFS
-  /* Mount the tmpfs file system */
-
-  ret = nx_mount(NULL, CONFIG_LIBC_TMPDIR, "tmpfs", 0, NULL);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to mount tmpfs at %s: %d\n",
-             CONFIG_LIBC_TMPDIR, ret);
-    }
-#endif
 
 #ifdef CONFIG_STM32_ROMFS
   /* Mount the romfs partition */
@@ -492,12 +414,6 @@ int stm32_bringup(void)
     }
 #endif /* HAVE_PROGMEM_CHARDEV */
 #endif /* CONFIG_MTD */
-
-#ifdef CONFIG_STM32_IWDG
-  /* Initialize the watchdog timer */
-
-  stm32_iwdginitialize("/dev/watchdog0", STM32_LSI_FREQUENCY);
-#endif
 
   return OK;
 }

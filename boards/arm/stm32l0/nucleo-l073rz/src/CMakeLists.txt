@@ -24,8 +24,6 @@ set(SRCS stm32_boot.c stm32_bringup.c)
 
 if(CONFIG_ARCH_LEDS)
   list(APPEND SRCS stm32_autoleds.c)
-else()
-  list(APPEND SRCS stm32_userleds.c)
 endif()
 
 if(CONFIG_ARCH_BUTTONS)
@@ -42,10 +40,6 @@ endif()
 
 if(CONFIG_LPWAN_SX127X)
   list(APPEND SRCS stm32_sx127x.c)
-endif()
-
-if(CONFIG_CL_MFRC522)
-  list(APPEND SRCS stm32_mfrc522.c)
 endif()
 
 target_sources(board PRIVATE ${SRCS})

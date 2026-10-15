@@ -30,20 +30,14 @@
 #include <nuttx/debug.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/usb/cdcacm.h>
 
-#include "stm32_i2c.h"
 #include "nucleo-f072rb.h"
+#include "board_common.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#undef HAVE_I2C_DRIVER
-#if defined(CONFIG_STM32_I2C1) && defined(CONFIG_I2C_DRIVER)
-#  define HAVE_I2C_DRIVER 1
-#endif
 
 #if defined(CONFIG_CDCACM) && !defined(CONFIG_CDCACM_COMPOSITE)
 #  define HAVE_CDCACM 1
@@ -66,40 +60,16 @@
 
 int stm32_bringup(void)
 {
-#ifdef HAVE_I2C_DRIVER
-  struct i2c_master_s *i2c;
-#endif
   int ret;
 
-#ifdef CONFIG_FS_PROCFS
-  /* Mount the procfs file system */
+  /* Initialize the board features common to all STM32 boards */
 
-  ret = nx_mount(NULL, "/proc", "procfs", 0, NULL);
+  ret = stm32_common_initialize();
   if (ret < 0)
     {
-      ferr("ERROR: Failed to mount procfs at /proc: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: stm32_common_initialize() failed: %d\n",
+             ret);
     }
-#endif
-
-#ifdef HAVE_I2C_DRIVER
-  /* Get the I2C lower half instance */
-
-  i2c = stm32_i2cbus_initialize(1);
-  if (i2c == NULL)
-    {
-      i2cerr("ERROR: Initialize I2C1: %d\n", ret);
-    }
-  else
-    {
-      /* Register the I2C character driver */
-
-      ret = i2c_register(i2c, 1);
-      if (ret < 0)
-        {
-          i2cerr("ERROR: Failed to register I2C1 device: %d\n", ret);
-        }
-    }
-#endif
 
 #ifdef HAVE_CDCACM
   ret = cdcacm_initialize(0, NULL);
